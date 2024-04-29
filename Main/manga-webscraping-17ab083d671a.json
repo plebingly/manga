@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "manga-webscraping",
+  "private_key_id": "17ab083d671a3fc0f6a3d610c4a495191bd6a89b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0kzf9ceTX9mxa\n3buTVZ3qs3N/hxdi5R/uCnMaVaG99FacQbdgDOLqTkMldvHmOTpLbkuoJKy41G1V\nkrhEFxH41BP0+0zTx8ZoitxtjzdXZngaBaH2t2cShGU+sVIvmoZgESxCnEh4RmCa\nY7xf+18VnrN+3I19kOYT1/dlAVdtKKDmka3Z/n9hTljty2ZqrAJQwTDiNPFph2RT\nKF6MVC+loUSfo9UY1fHKcWLb+cAvvoPiTeRMbdSUrOT8psKs5Zr4q0D5zI9v9lip\nuPL4zNW1ZKLDO1ADWF7FoKTKgRzruArWeN5/dkDuaHO76wTS79FCS8gD5MgiJb72\nUg01O4otAgMBAAECggEAIyeFDzWY4nVyP1drEOIqafqRKfrsEd/+8Rn+MhqJMECt\nCuMdVtjzZT+iwVywd8xc3boFhyDKsnoCphX4AyOFp25sSzWQTauXJBuikb6/vKdx\nisldcHlgmuGFD2k4kZVxAytctUQVNLsoy+3OStZWetBIbBJ2hkNLE4JoQrT55wFd\n6Dv+EI9H8A/VPiv8iwzDLn1qMdmejaPAe2SSrNbS4NpES1i+zF3NSvLuyXUiOtxL\n2jhrmn5F+guuVpNxn4x21itwZ32EpgPtd5f32CMJWv0ly2jgNEfyNkHRDQUJR80C\nWdO6jM0heF8a9bcbBUEdHviyxTkhltAKYw+0f4IKEQKBgQDYGoZqRO/k1C81bcd2\ninojeXuTbWs9LyFMFnxESq8gz5soyqu9AbKw5tOMXSYliOLKDwiXTDR6TE4TN7mw\n61DEft3vQsFGcBVHWqIGRQERnz3FpkftGNx8Azsw/IvcWwHw5F2v1qH1mU0w9zL4\ny3sy9i4T06CA+eqMtuM+eAK2HQKBgQDV6YvMF1R4Cw6b+7WcPEkUpO2B5vCC0ZcG\nYa4xZIrQZCn9zYjMKyFQZOI1X5UdLXOXTb60nx0RLkSjKfYE64KAQVg113M3ogUq\nDutGcw9J6YxKN/MHKDhJv0fbFzUTrxQSNs5VAemppr+CLSYv7XgXj7j24UoGdbQL\n96ZQtW+nUQKBgQCbPjLhlLRhRqzDTSHFXqVvZo4H0sr/ISRibKTIyn4UrA9itnW5\nScb8nlXKt//3ZubFERey2OO6F6be12FmXyWegyUcBHCkEVC3+bv7lQa3ihXuLw3s\nnbeGvyt+fW5b1mUGkIddEms26/IwAuVzJXpTmdZwF89t2BtPCvMkpUINYQKBgDWb\nmdVD439SBg9BPXoyAX6S9pKfdZbTP63xvN3T/JXNBFj+sVG5XVfwcGA/2/a79UPt\nz+UkGvy7Q6hAU89X1hSeS6TyoYVHrVOk+YFmRGaZiPbwno8knTaeITvezQZp0fXe\nlkbne89wYn4VIoTQVlBRTGFShGKqDL0TCzMexSSBAoGAGs6n6xV9XmnrTJsHdcLu\nl+MgUxbAponXlkDBnI9nc61o/adCJmzcE5yDBjcWPxVZMKg8e164d7Q37bDZFVQk\ncce3UFug79Asr5ncoRGS/ESKhqhdhu5h0uKYjWTf7CfuWAJEYnr7MmYmDuaW3zUs\nt/xZyHB7hL149ddGG87guhw=\n-----END PRIVATE KEY-----\n",
+  "client_email": "mangascrape@manga-webscraping.iam.gserviceaccount.com",
+  "client_id": "107396362238216966204",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mangascrape%40manga-webscraping.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

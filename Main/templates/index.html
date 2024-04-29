@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}"> 
+    <title>Manga Scraper</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+
+            margin: 0; /* to load on mobile, "ip:port", but make sure net work private, settings, wifi, properties, private */
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative; /* Set container position to relative */ 
+        }
+        .image {
+            margin-bottom: 20px;
+            max-width: 100%; /* Ensure images fit within their container */
+        }
+        #gallery {
+            display: none; /* Initially hide the gallery */
+        }
+        #loadButton {
+            position: absolute; /* Set button position to absolute */
+            top: 20px; /* Adjust top position as needed */
+            right: 20px; /* Adjust right position as needed */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manga</h1>
+        <form action="/" method="post">
+            <label for="manga_name">Manga Name:</label>
+            <input type="text" id="manga_name" name="manga_name">
+            <br>
+            <label for="chapter_number">Chapter Number:</label>
+            <input type="text" id="chapter_number" name="chapter_number">
+            <br>
+            <label for="delete_images">Delete Images?</label>
+            <select id="delete_images" name="delete_images">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+            <br>
+            <input type="submit" value="Submit">
+        </form>
+        <div id="gallery"></div>
+        <button id="loadButton" class="button-17" onclick="toggleImages()">Load/Unload Images</button> <!-- Add this button -->
+    </div>
+
+    <script>
+        let imagesLoaded = false; // Track if images are loaded
+
+        function toggleImages() {
+            const gallery = document.getElementById('gallery');
+            if (imagesLoaded) {
+                gallery.innerHTML = ''; // Clear existing images
+                gallery.style.display = 'none'; // Hide the gallery
+                imagesLoaded = false;
+            } else {
+                loadImages(); // Load images
+                gallery.style.display = 'block'; // Show the gallery
+                imagesLoaded = true;
+            }
+        }
+
+        function loadImages() {
+            const folderId = '15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS'; // Replace with your folder ID
+            const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=AIzaSyC5tOQLMpVJUXBmlhUssGeV7mNWMil7bY8`; // Replace YOUR_API_KEY with your Google Drive API key
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const images = data.files.filter(file => file.mimeType.startsWith('image/'));
+                    images.reverse(); // Reverse the order of images
+                    const gallery = document.getElementById('gallery');
+
+                    gallery.innerHTML = ''; // Clear existing images
+
+                    images.forEach(image => {
+                        const imageUrl = `https://drive.google.com/thumbnail?id=${image.id}&sz=w1000`;
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imageUrl;
+                        imgElement.classList.add('image');
+                        gallery.appendChild(imgElement);
+                    });
+                })
+                .catch(error => console.error('Error fetching images:', error));
+        }
+    </script>
+</body>
+</html>
