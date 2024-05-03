@@ -42,8 +42,11 @@ def index():
         elif delete_images == 'no':
             print("Images in Google Drive folder will be kept.")
 
-        path = "manga-images"
-        os.makedirs(path, exist_ok=True)
+        # Define the directory for saving images relative to the Flask app root directory
+        IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+
+        # Ensure the image directory exists
+        os.makedirs(IMAGE_DIR, exist_ok=True)
 
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
         chapter_number = request.form.get('chapter_number').zfill(4)
@@ -63,7 +66,7 @@ def index():
                 try:
                     response = requests.get(image_url.format(image_number=image_number))
                     if response.status_code == 200:
-                        with open(f"{path}/image_{image_number}.png", "wb") as file:
+                        with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
                             file.write(response.content)
                         downloaded_images.append(image_number)
                         print(f"Downloaded and saved image {image_number}")
@@ -105,17 +108,15 @@ def index():
 
         page_number = 1
         for image_number in downloaded_images:
-            upload_photo(f"C:\\Games\\Coding\\Main\\manga-images\\image_{image_number}.png")
+            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
             page_number += 1
 
         # Add a delay before deleting the folder
         time.sleep(5)  # 5 seconds delay
 
-        absolute_path = os.path.abspath(path)
-
         try:
-            shutil.rmtree(absolute_path)
-            print(f"Deleted folder: {absolute_path}")
+            shutil.rmtree(IMAGE_DIR)
+            print(f"Deleted folder: {IMAGE_DIR}")
         except Exception as e:
             print(f"Error deleting folder: {e}")
 
