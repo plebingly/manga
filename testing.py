@@ -32,31 +32,41 @@ def delete_files_in_folder(folder_id):
         if page_token is None:
             break
 
-def download_images(manga_name, chapter_number, image_urls, IMAGE_DIR):
-    downloaded = False
-    downloaded_images = []
-    for i in range(1, 1000):
-        image_number = str(i).zfill(3)
-        for image_url in image_urls:
-            try:
-                response = requests.get(image_url.format(image_number=image_number))
-                if response.status_code == 200:
-                    with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
-                        file.write(response.content)
-                    downloaded_images.append(image_number)
-                    print(f"Downloaded and saved image {image_number}")
-                    downloaded = True
-                    break
-            except Exception as e:
-                print(f"Error downloading image {image_number} from {image_url}: {e}")
-        else:
-            print(f"Unable to download image {image_number}")
-        if not downloaded:
-            break
-        else:
-            downloaded = False
+def download_zoro_x_sanji_images():
+    # Define the directory for saving images relative to the Flask app root directory
+    IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
 
-    return downloaded_images
+    # Ensure the image directory exists
+    os.makedirs(IMAGE_DIR, exist_ok=True)
+
+    # Define the base URL for zoro x sanji
+    base_url = "https://i3.nhentai.net/galleries/1166299/"
+
+    # Initialize the page number
+    page_number = 1
+
+    # Loop to download images
+    while True:
+        try:
+            # Construct the image URL
+            image_url = f"{base_url}{page_number}.jpg"
+            # Download the image
+            response = requests.get(image_url)
+            if response.status_code == 200:
+                # Save the image
+                with open(os.path.join(IMAGE_DIR, f"image_{page_number}.jpg"), "wb") as file:
+                    file.write(response.content)
+                print(f"Downloaded and saved image {page_number}")
+                # Increment page number
+                page_number += 1
+            else:
+                # If the response status code is not 200, stop downloading
+                break
+        except Exception as e:
+            print(f"Error downloading image {page_number}: {e}")
+
+    # Continue with the rest of the code (uploading images to Google Drive, etc.)
+    # ...
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -68,58 +78,87 @@ def index():
         elif delete_images == 'no':
             print("Images in Google Drive folder will be kept.")
 
+        # Define the directory for saving images relative to the Flask app root directory
         IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+
+        # Ensure the image directory exists
         os.makedirs(IMAGE_DIR, exist_ok=True)
 
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
         chapter_number = request.form.get('chapter_number').zfill(4)
 
         if manga_name.lower() == "zoro-x-sanji":
-            image_urls = ["https://i3.nhentai.net/galleries/1166299/{page}.jpg"]
-            downloaded_images = download_images(manga_name, chapter_number, image_urls, IMAGE_DIR)
+            download_zoro_x_sanji_images()
         else:
+            # Original image downloading process
             image_urls = [
                 f"https://scans-hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
                 f"https://hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
                 f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
             ]
-            downloaded_images = download_images(manga_name, chapter_number, image_urls, IMAGE_DIR)
 
-        SCOPES = ['https://www.googleapis.com/auth/drive']
-        SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
-        PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
+            downloaded = False  # Track if any images were downloaded
+            downloaded_images = []  # Track the downloaded images
 
-        def upload_photo(file_path):
-            creds = authenticate()
-            service = build('drive', 'v3', credentials=creds)
-            file_metadata = {
-                'name': os.path.basename(file_path),
-                'parents': [PARENT_FOLDER_ID]
-            }
+            for i in range(1, 1000):
+                image_number = str(i).zfill(3)
+                for image_url in image_urls:
+                    try:
+                        response = requests.get(image_url.format(image_number=image_number))
+                        if response.status_code == 200:
+                            with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
+                                file.write(response.content)
+                            downloaded_images.append(image_number)
+                            print(f"Downloaded and saved image {image_number}")
+                            downloaded = True  # Set downloaded to True if any image was downloaded
+                            break  # Break the inner loop if successful
+                    except Exception as e:
+                        print(f"Error downloading image {image_number} from {image_url}: {e}")
+                else:
+                    # If none of the image URLs worked, print an error message
+                    print(f"Unable to download image {image_number}")
 
-            media = MediaFileUpload(file_path, resumable=True)
+                if not downloaded:
+                    # If no images were downloaded in this iteration, break the loop
+                    break
+                else:
+                    downloaded = False  # Reset downloaded for the next iteration
 
-            file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
+            SCOPES = ['https://www.googleapis.com/auth/drive']
+            SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
+            PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
 
-            print(f'File ID: {file.get("id")}')
+            def upload_photo(file_path):
+                creds = authenticate()
+                service = build('drive', 'v3', credentials=creds)
+                file_metadata = {
+                    'name': os.path.basename(file_path),
+                    'parents': [PARENT_FOLDER_ID]
+                }
 
-        page_number = 1
-        for image_number in downloaded_images:
-            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
-            page_number += 1
+                media = MediaFileUpload(file_path, resumable=True)
 
-        # Add a delay before deleting the folder
-        time.sleep(5)  # 5 seconds delay
+                file = service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
 
-        try:
-            shutil.rmtree(IMAGE_DIR)
-            print(f"Deleted folder: {IMAGE_DIR}")
-        except Exception as e:
-            print(f"Error deleting folder: {e}")
+                print(f'File ID: {file.get("id")}')
+
+            page_number = 1
+            for image_number in downloaded_images:
+                upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
+                page_number += 1
+
+            # Add a delay before deleting the folder
+            time.sleep(5)  # 5 seconds delay
+
+            try:
+                shutil.rmtree(IMAGE_DIR)
+                print(f"Deleted folder: {IMAGE_DIR}")
+            except Exception as e:
+                print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
 
