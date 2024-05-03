@@ -32,60 +32,31 @@ def delete_files_in_folder(folder_id):
         if page_token is None:
             break
 
-def download_and_upload_zoro_sanji():
-    # Define the directory for saving images relative to the Flask app root directory
-    IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
-
-    # Ensure the image directory exists
-    os.makedirs(IMAGE_DIR, exist_ok=True)
-
-    image_url = "https://i3.nhentai.net/galleries/1166299/{}.jpg"
-    page_number = 1
+def download_images(manga_name, chapter_number, image_urls, IMAGE_DIR):
+    downloaded = False
     downloaded_images = []
+    for i in range(1, 1000):
+        image_number = str(i).zfill(3)
+        for image_url in image_urls:
+            try:
+                response = requests.get(image_url.format(image_number=image_number))
+                if response.status_code == 200:
+                    with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
+                        file.write(response.content)
+                    downloaded_images.append(image_number)
+                    print(f"Downloaded and saved image {image_number}")
+                    downloaded = True
+                    break
+            except Exception as e:
+                print(f"Error downloading image {image_number} from {image_url}: {e}")
+        else:
+            print(f"Unable to download image {image_number}")
+        if not downloaded:
+            break
+        else:
+            downloaded = False
 
-    while True:
-        try:
-            response = requests.get(image_url.format(page_number))
-            if response.status_code == 200:
-                with open(os.path.join(IMAGE_DIR, f"image_{page_number}.jpg"), "wb") as file:
-                    file.write(response.content)
-                downloaded_images.append(page_number)
-                print(f"Downloaded and saved image {page_number}")
-                page_number += 1
-            else:
-                break  # If the response status code is not 200, stop downloading
-        except Exception as e:
-            print(f"Error downloading image {page_number}: {e}")
-            break  # If there's an error, stop downloading
-
-    # Upload downloaded images to Google Drive
-    SCOPES = ['https://www.googleapis.com/auth/drive']
-    SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
-    PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
-
-    creds = authenticate()
-    service = build('drive', 'v3', credentials=creds)
-
-    for image_number in downloaded_images:
-        file_path = os.path.join(IMAGE_DIR, f"image_{image_number}.jpg")
-        file_metadata = {
-            'name': os.path.basename(file_path),
-            'parents': [PARENT_FOLDER_ID]
-        }
-        media = MediaFileUpload(file_path, resumable=True)
-        file = service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
-        print(f'File ID: {file.get("id")}')
-
-    # Delete the temporary image directory
-    try:
-        shutil.rmtree(IMAGE_DIR)
-        print(f"Deleted folder: {IMAGE_DIR}")
-    except Exception as e:
-        print(f"Error deleting folder: {e}")
+    return downloaded_images
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -97,9 +68,58 @@ def index():
         elif delete_images == 'no':
             print("Images in Google Drive folder will be kept.")
 
+        IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+        os.makedirs(IMAGE_DIR, exist_ok=True)
+
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
+        chapter_number = request.form.get('chapter_number').zfill(4)
+
         if manga_name.lower() == "zoro-x-sanji":
-            download_and_upload_zoro_sanji()
+            image_urls = ["https://i3.nhentai.net/galleries/1166299/{page}.jpg"]
+            downloaded_images = download_images(manga_name, chapter_number, image_urls, IMAGE_DIR)
+        else:
+            image_urls = [
+                f"https://scans-hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
+                f"https://hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
+                f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
+            ]
+            downloaded_images = download_images(manga_name, chapter_number, image_urls, IMAGE_DIR)
+
+        SCOPES = ['https://www.googleapis.com/auth/drive']
+        SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
+        PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
+
+        def upload_photo(file_path):
+            creds = authenticate()
+            service = build('drive', 'v3', credentials=creds)
+            file_metadata = {
+                'name': os.path.basename(file_path),
+                'parents': [PARENT_FOLDER_ID]
+            }
+
+            media = MediaFileUpload(file_path, resumable=True)
+
+            file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+
+            print(f'File ID: {file.get("id")}')
+
+        page_number = 1
+        for image_number in downloaded_images:
+            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
+            page_number += 1
+
+        # Add a delay before deleting the folder
+        time.sleep(5)  # 5 seconds delay
+
+        try:
+            shutil.rmtree(IMAGE_DIR)
+            print(f"Deleted folder: {IMAGE_DIR}")
+        except Exception as e:
+            print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
 
