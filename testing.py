@@ -1,8 +1,7 @@
-import asyncio
 from flask import Flask, render_template, request
 import os
 import shutil
-import aiohttp
+import requests
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from googleapiclient.http import MediaFileUpload
@@ -26,18 +25,12 @@ def delete_files_in_folder(folder_id):
         for file in response.get('files', []):
             try:
                 service.files().delete(fileId=file['id']).execute()
+                print(f"Deleted file: {file['name']}")
             except Exception as e:
                 print(f"Error deleting file {file['name']}: {e}")
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
-
-async def download_image(session, url, path):
-    async with session.get(url) as response:
-        if response.status == 200:
-            image_content = await response.read()
-            with open(path, "wb") as file:
-                file.write(image_content)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -45,10 +38,14 @@ def index():
         delete_images = request.form.get('delete_images')
         if delete_images == 'yes':
             delete_files_in_folder('15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS')
+            print("Images in Google Drive folder deleted.")
         elif delete_images == 'no':
-            pass
+            print("Images in Google Drive folder will be kept.")
 
+        # Define the directory for saving images relative to the Flask app root directory
         IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+
+        # Ensure the image directory exists
         os.makedirs(IMAGE_DIR, exist_ok=True)
 
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
@@ -60,17 +57,32 @@ def index():
             f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
         ]
 
-        async def download_all_images():
-            tasks = []
-            async with aiohttp.ClientSession() as session:
-                for i in range(1, 1000):
-                    image_number = str(i).zfill(3)
-                    for image_url in image_urls:
-                        task = asyncio.create_task(download_image(session, image_url.format(image_number=image_number), os.path.join(IMAGE_DIR, f"image_{image_number}.png")))
-                        tasks.append(task)
-            await asyncio.gather(*tasks)
+        downloaded = False  # Track if any images were downloaded
+        downloaded_images = []  # Track the downloaded images
 
-        asyncio.run(download_all_images())
+        for i in range(1, 1000):
+            image_number = str(i).zfill(3)
+            for image_url in image_urls:
+                try:
+                    response = requests.get(image_url.format(image_number=image_number))
+                    if response.status_code == 200:
+                        with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
+                            file.write(response.content)
+                        downloaded_images.append(image_number)
+                        print(f"Downloaded and saved image {image_number}")
+                        downloaded = True  # Set downloaded to True if any image was downloaded
+                        break  # Break the inner loop if successful
+                except Exception as e:
+                    print(f"Error downloading image {image_number} from {image_url}: {e}")
+            else:
+                # If none of the image URLs worked, print an error message
+                print(f"Unable to download image {image_number}")
+
+            if not downloaded:
+                # If no images were downloaded in this iteration, break the loop
+                break
+            else:
+                downloaded = False  # Reset downloaded for the next iteration
 
         SCOPES = ['https://www.googleapis.com/auth/drive']
         SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
@@ -92,21 +104,21 @@ def index():
                 fields='id'
             ).execute()
 
-        async def upload_all_images():
-            tasks = []
-            for i in range(1, 1000):
-                image_number = str(i).zfill(3)
-                tasks.append(asyncio.create_task(upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))))
-            await asyncio.gather(*tasks)
+            print(f'File ID: {file.get("id")}')
 
-        asyncio.run(upload_all_images())
+        page_number = 1
+        for image_number in downloaded_images:
+            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
+            page_number += 1
 
-        time.sleep(5)
+        # Add a delay before deleting the folder
+        time.sleep(5)  # 5 seconds delay
 
         try:
             shutil.rmtree(IMAGE_DIR)
+            print(f"Deleted folder: {IMAGE_DIR}")
         except Exception as e:
-            pass
+            print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
 
