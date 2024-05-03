@@ -51,38 +51,44 @@ def index():
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
         chapter_number = request.form.get('chapter_number').zfill(4)
 
-        image_urls = [
-            f"https://scans-hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
-            f"https://hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
-            f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
-        ]
+        if manga_name.lower() == "zoro-x-sanji":
+            # Use the specific link and increment the page number
+            image_url = f"https://i3.nhentai.net/galleries/1166299/{chapter_number}.jpg"
+            downloaded_images = [chapter_number]
+        else:
+            # Use the regular image URLs
+            image_urls = [
+                f"https://scans-hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
+                f"https://hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
+                f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
+            ]
 
-        downloaded = False  # Track if any images were downloaded
-        downloaded_images = []  # Track the downloaded images
+            downloaded = False  # Track if any images were downloaded
+            downloaded_images = []  # Track the downloaded images
 
-        for i in range(1, 1000):
-            image_number = str(i).zfill(3)
-            for image_url in image_urls:
-                try:
-                    response = requests.get(image_url.format(image_number=image_number))
-                    if response.status_code == 200:
-                        with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
-                            file.write(response.content)
-                        downloaded_images.append(image_number)
-                        print(f"Downloaded and saved image {image_number}")
-                        downloaded = True  # Set downloaded to True if any image was downloaded
-                        break  # Break the inner loop if successful
-                except Exception as e:
-                    print(f"Error downloading image {image_number} from {image_url}: {e}")
-            else:
-                # If none of the image URLs worked, print an error message
-                print(f"Unable to download image {image_number}")
+            for i in range(1, 1000):
+                image_number = str(i).zfill(3)
+                for image_url in image_urls:
+                    try:
+                        response = requests.get(image_url.format(image_number=image_number))
+                        if response.status_code == 200:
+                            with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
+                                file.write(response.content)
+                            downloaded_images.append(image_number)
+                            print(f"Downloaded and saved image {image_number}")
+                            downloaded = True  # Set downloaded to True if any image was downloaded
+                            break  # Break the inner loop if successful
+                    except Exception as e:
+                        print(f"Error downloading image {image_number} from {image_url}: {e}")
+                else:
+                    # If none of the image URLs worked, print an error message
+                    print(f"Unable to download image {image_number}")
 
-            if not downloaded:
-                # If no images were downloaded in this iteration, break the loop
-                break
-            else:
-                downloaded = False  # Reset downloaded for the next iteration
+                if not downloaded:
+                    # If no images were downloaded in this iteration, break the loop
+                    break
+                else:
+                    downloaded = False  # Reset downloaded for the next iteration
 
         SCOPES = ['https://www.googleapis.com/auth/drive']
         SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
