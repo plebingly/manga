@@ -2,50 +2,29 @@ from flask import Flask, render_template, request
 import os
 import shutil
 import requests
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
-from googleapiclient.http import MediaFileUpload
 import time
+import hashlib  # For generating unique directory names
 
 app = Flask(__name__)
 
-def authenticate():
-    SCOPES = ['https://www.googleapis.com/auth/drive']
-    creds = service_account.Credentials.from_service_account_file('manga-webscraping-17ab083d671a.json', scopes=SCOPES)
-    return creds
-
-def delete_files_in_folder(folder_id):
-    service = build('drive', 'v3', credentials=authenticate())
-    page_token = None
-    while True:
-        response = service.files().list(q=f"'{folder_id}' in parents",
-                                        spaces='drive',
-                                        fields='nextPageToken, files(id, name)',
-                                        pageToken=page_token).execute()
-        for file in response.get('files', []):
-            try:
-                service.files().delete(fileId=file['id']).execute()
-                print(f"Deleted file: {file['name']}")
-            except Exception as e:
-                print(f"Error deleting file {file['name']}: {e}")
-        page_token = response.get('nextPageToken', None)
-        if page_token is None:
-            break
+def get_user_directory(user_identifier):
+    # Generate a unique directory name for the user using their identifier
+    # You can replace hashlib with any other method you prefer for creating unique names
+    user_dir = hashlib.md5(user_identifier.encode()).hexdigest()
+    return os.path.join(os.getcwd(), "user_data", user_dir)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        delete_images = request.form.get('delete_images')
-        if delete_images == 'yes':
-            delete_files_in_folder('15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS')
-            print("Images in Google Drive folder deleted.")
-        elif delete_images == 'no':
-            print("Images in Google Drive folder will be kept.")
+        # Get user identifier (for example, username)
+        user_identifier = request.form.get('username')
 
-        # Define the directory for saving images relative to the Flask app root directory
-        IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+        # Create a directory for the user if it doesn't exist
+        user_dir = get_user_directory(user_identifier)
+        os.makedirs(user_dir, exist_ok=True)
 
-        # Ensure the image directory exists
+        # Define the directory for saving images relative to the user's directory
+        IMAGE_DIR = os.path.join(user_dir, "manga-images")
         os.makedirs(IMAGE_DIR, exist_ok=True)
 
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
@@ -84,31 +63,9 @@ def index():
             else:
                 downloaded = False  # Reset downloaded for the next iteration
 
-        SCOPES = ['https://www.googleapis.com/auth/drive']
-        SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
-        PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
-
-        def upload_photo(file_path):
-            creds = authenticate()
-            service = build('drive', 'v3', credentials=creds)
-            file_metadata = {
-                'name': os.path.basename(file_path),
-                'parents': [PARENT_FOLDER_ID]
-            }
-
-            media = MediaFileUpload(file_path, resumable=True)
-
-            file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
-
-            print(f'File ID: {file.get("id")}')
-
         page_number = 1
         for image_number in downloaded_images:
-            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
+            # Process the downloaded images as needed
             page_number += 1
 
         # Add a delay before deleting the folder
