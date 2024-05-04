@@ -1,26 +1,51 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 import os
 import shutil
 import requests
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from googleapiclient.http import MediaFileUpload
 import time
-import hashlib  # For generating unique directory names
 
 app = Flask(__name__)
 
-def get_user_directory(user_identifier):
-    if not user_identifier:
-        user_identifier = "default_user"
-    user_dir = hashlib.md5(user_identifier.encode()).hexdigest()
-    return os.path.join(os.getcwd(), "user_data", user_dir)
+def authenticate():
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    creds = service_account.Credentials.from_service_account_file('manga-webscraping-17ab083d671a.json', scopes=SCOPES)
+    return creds
+
+def delete_files_in_folder(folder_id):
+    service = build('drive', 'v3', credentials=authenticate())
+    page_token = None
+    while True:
+        response = service.files().list(q=f"'{folder_id}' in parents",
+                                        spaces='drive',
+                                        fields='nextPageToken, files(id, name)',
+                                        pageToken=page_token).execute()
+        for file in response.get('files', []):
+            try:
+                service.files().delete(fileId=file['id']).execute()
+                print(f"Deleted file: {file['name']}")
+            except Exception as e:
+                print(f"Error deleting file {file['name']}: {e}")
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        user_identifier = request.form.get('username')
-        user_dir = get_user_directory(user_identifier)
-        os.makedirs(user_dir, exist_ok=True)
+        delete_images = request.form.get('delete_images')
+        if delete_images == 'yes':
+            delete_files_in_folder('15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS')
+            print("Images in Google Drive folder deleted.")
+        elif delete_images == 'no':
+            print("Images in Google Drive folder will be kept.")
 
-        IMAGE_DIR = os.path.join(user_dir, "manga-images")
+        # Define the directory for saving images relative to the Flask app root directory
+        IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
+
+        # Ensure the image directory exists
         os.makedirs(IMAGE_DIR, exist_ok=True)
 
         manga_name = request.form.get('manga_name').title().replace(" ", "-")
@@ -32,8 +57,8 @@ def index():
             f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
         ]
 
-        downloaded = False
-        downloaded_images = []
+        downloaded = False  # Track if any images were downloaded
+        downloaded_images = []  # Track the downloaded images
 
         for i in range(1, 1000):
             image_number = str(i).zfill(3)
@@ -45,23 +70,49 @@ def index():
                             file.write(response.content)
                         downloaded_images.append(image_number)
                         print(f"Downloaded and saved image {image_number}")
-                        downloaded = True
-                        break
+                        downloaded = True  # Set downloaded to True if any image was downloaded
+                        break  # Break the inner loop if successful
                 except Exception as e:
                     print(f"Error downloading image {image_number} from {image_url}: {e}")
             else:
+                # If none of the image URLs worked, print an error message
                 print(f"Unable to download image {image_number}")
 
             if not downloaded:
+                # If no images were downloaded in this iteration, break the loop
                 break
             else:
-                downloaded = False
+                downloaded = False  # Reset downloaded for the next iteration
+
+        SCOPES = ['https://www.googleapis.com/auth/drive']
+        SERVICE_ACCOUNT_FILE = 'manga-webscraping-17ab083d671a.json'
+        PARENT_FOLDER_ID = "15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS"
+
+        def upload_photo(file_path):
+            creds = authenticate()
+            service = build('drive', 'v3', credentials=creds)
+            file_metadata = {
+                'name': os.path.basename(file_path),
+                'parents': [PARENT_FOLDER_ID]
+            }
+
+            media = MediaFileUpload(file_path, resumable=True)
+
+            file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+
+            print(f'File ID: {file.get("id")}')
 
         page_number = 1
         for image_number in downloaded_images:
+            upload_photo(os.path.join(IMAGE_DIR, f"image_{image_number}.png"))
             page_number += 1
 
-        time.sleep(5)
+        # Add a delay before deleting the folder
+        time.sleep(5)  # 5 seconds delay
 
         try:
             shutil.rmtree(IMAGE_DIR)
@@ -70,12 +121,6 @@ def index():
             print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
-
-@app.route('/user-images/<path:filename>')
-def get_user_images(filename):
-    user_identifier = request.args.get('username')
-    user_dir = get_user_directory(user_identifier)
-    return send_from_directory(user_dir, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
