@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify  # Import jsonify for JSON responses
 import os
 import shutil
 import requests
@@ -85,6 +85,22 @@ def index():
             print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
+
+@app.route('/user-images', methods=['GET'])
+def get_user_images():
+    # Get the user identifier from the request parameters
+    user_identifier = request.args.get('user_identifier')
+
+    # Get the user directory
+    user_dir = get_user_directory(user_identifier)
+
+    # List all image files in the user directory
+    image_files = [f for f in os.listdir(user_dir) if os.path.isfile(os.path.join(user_dir, f))]
+
+    # Generate URLs for the image files
+    image_urls = [f"/user-images/{user_identifier}/{f}" for f in image_files]
+
+    return jsonify({'files': [{'url': url} for url in image_urls]})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
