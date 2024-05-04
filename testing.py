@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify  # Import jsonify for JSON responses
+from flask import Flask, render_template, request, send_from_directory
 import os
 import shutil
 import requests
@@ -8,29 +8,18 @@ import hashlib  # For generating unique directory names
 app = Flask(__name__)
 
 def get_user_directory(user_identifier):
-    # Check if user_identifier is None or empty
     if not user_identifier:
-        # Assign a default value or handle it appropriately
         user_identifier = "default_user"
-
-    # Generate a unique directory name for the user using their identifier
-    # You can replace hashlib with any other method you prefer for creating unique names
     user_dir = hashlib.md5(user_identifier.encode()).hexdigest()
     return os.path.join(os.getcwd(), "user_data", user_dir)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # Get user identifier (for example, username)
         user_identifier = request.form.get('username')
-
-        # Get user directory
         user_dir = get_user_directory(user_identifier)
-
-        # Create a directory for the user if it doesn't exist
         os.makedirs(user_dir, exist_ok=True)
 
-        # Define the directory for saving images relative to the user's directory
         IMAGE_DIR = os.path.join(user_dir, "manga-images")
         os.makedirs(IMAGE_DIR, exist_ok=True)
 
@@ -43,8 +32,8 @@ def index():
             f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
         ]
 
-        downloaded = False  # Track if any images were downloaded
-        downloaded_images = []  # Track the downloaded images
+        downloaded = False
+        downloaded_images = []
 
         for i in range(1, 1000):
             image_number = str(i).zfill(3)
@@ -56,27 +45,23 @@ def index():
                             file.write(response.content)
                         downloaded_images.append(image_number)
                         print(f"Downloaded and saved image {image_number}")
-                        downloaded = True  # Set downloaded to True if any image was downloaded
-                        break  # Break the inner loop if successful
+                        downloaded = True
+                        break
                 except Exception as e:
                     print(f"Error downloading image {image_number} from {image_url}: {e}")
             else:
-                # If none of the image URLs worked, print an error message
                 print(f"Unable to download image {image_number}")
 
             if not downloaded:
-                # If no images were downloaded in this iteration, break the loop
                 break
             else:
-                downloaded = False  # Reset downloaded for the next iteration
+                downloaded = False
 
         page_number = 1
         for image_number in downloaded_images:
-            # Process the downloaded images as needed
             page_number += 1
 
-        # Add a delay before deleting the folder
-        time.sleep(5)  # 5 seconds delay
+        time.sleep(5)
 
         try:
             shutil.rmtree(IMAGE_DIR)
@@ -86,21 +71,11 @@ def index():
 
     return render_template('index.html')
 
-@app.route('/user-images', methods=['GET'])
-def get_user_images():
-    # Get the user identifier from the request parameters
-    user_identifier = request.args.get('user_identifier')
-
-    # Get the user directory
+@app.route('/user-images/<path:filename>')
+def get_user_images(filename):
+    user_identifier = request.args.get('username')
     user_dir = get_user_directory(user_identifier)
-
-    # List all image files in the user directory
-    image_files = [f for f in os.listdir(user_dir) if os.path.isfile(os.path.join(user_dir, f))]
-
-    # Generate URLs for the image files
-    image_urls = [f"/user-images/{user_identifier}/{f}" for f in image_files]
-
-    return jsonify({'files': [{'url': url} for url in image_urls]})
+    return send_from_directory(user_dir, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
