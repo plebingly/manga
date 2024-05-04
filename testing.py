@@ -25,9 +25,7 @@ def delete_files_in_folder(folder_id):
         for file in response.get('files', []):
             try:
                 service.files().delete(fileId=file['id']).execute()
-                print(f"Deleted file: {file['name']}")
             except Exception as e:
-                print(f"Error deleting file {file['name']}: {e}")
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
@@ -38,9 +36,7 @@ def index():
         delete_images = request.form.get('delete_images')
         if delete_images == 'yes':
             delete_files_in_folder('15b_ubaElxDFbdCJyFWDX9qLM5vxJbFwS')
-            print("Images in Google Drive folder deleted.")
         elif delete_images == 'no':
-            print("Images in Google Drive folder will be kept.")
 
         # Define the directory for saving images relative to the Flask app root directory
         IMAGE_DIR = os.path.join(os.getcwd(), "manga-images")
@@ -69,14 +65,11 @@ def index():
                         with open(os.path.join(IMAGE_DIR, f"image_{image_number}.png"), "wb") as file:
                             file.write(response.content)
                         downloaded_images.append(image_number)
-                        print(f"Downloaded and saved image {image_number}")
                         downloaded = True  # Set downloaded to True if any image was downloaded
                         break  # Break the inner loop if successful
                 except Exception as e:
-                    print(f"Error downloading image {image_number} from {image_url}: {e}")
             else:
                 # If none of the image URLs worked, print an error message
-                print(f"Unable to download image {image_number}")
 
             if not downloaded:
                 # If no images were downloaded in this iteration, break the loop
@@ -104,7 +97,6 @@ def index():
                 fields='id'
             ).execute()
 
-            print(f'File ID: {file.get("id")}')
 
         page_number = 1
         for image_number in downloaded_images:
@@ -116,9 +108,7 @@ def index():
 
         try:
             shutil.rmtree(IMAGE_DIR)
-            print(f"Deleted folder: {IMAGE_DIR}")
         except Exception as e:
-            print(f"Error deleting folder: {e}")
 
     return render_template('index.html')
 
