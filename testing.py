@@ -8,6 +8,11 @@ import hashlib  # For generating unique directory names
 app = Flask(__name__)
 
 def get_user_directory(user_identifier):
+    # Check if user_identifier is None or empty
+    if not user_identifier:
+        # Assign a default value or handle it appropriately
+        user_identifier = "default_user"
+
     # Generate a unique directory name for the user using their identifier
     # You can replace hashlib with any other method you prefer for creating unique names
     user_dir = hashlib.md5(user_identifier.encode()).hexdigest()
@@ -19,8 +24,10 @@ def index():
         # Get user identifier (for example, username)
         user_identifier = request.form.get('username')
 
-        # Create a directory for the user if it doesn't exist
+        # Get user directory
         user_dir = get_user_directory(user_identifier)
+
+        # Create a directory for the user if it doesn't exist
         os.makedirs(user_dir, exist_ok=True)
 
         # Define the directory for saving images relative to the user's directory
