@@ -54,7 +54,7 @@ def index():
         image_urls = [
             f"https://scans-hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
             f"https://hot.leanbox.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
-            f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
+            f"https://scans.lastation.us/manga/{manga_name}/{chapter_number}-{{image_number}}.png",
             f"https://temp.compsci88.com/manga/{manga_name}/{chapter_number}-{{image_number}}.png"
         ]
 
